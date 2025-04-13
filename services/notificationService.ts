@@ -1,6 +1,6 @@
-import * as Notifications from 'expo-notifications';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import * as Notifications from "expo-notifications";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import { Platform } from "react-native";
 
 // Configure notifications
 Notifications.setNotificationHandler({
@@ -17,32 +17,34 @@ export type NotificationSchedule = {
   title: string;
   body: string;
   time: number; // timestamp
-  recurrenceType: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly';
+  recurrenceType: "none" | "daily" | "weekly" | "monthly" | "yearly";
 };
 
 export async function registerForPushNotificationsAsync() {
   let token;
 
-  if (Platform.OS === 'android') {
-    await Notifications.setNotificationChannelAsync('default', {
-      name: 'default',
+  if (Platform.OS === "android") {
+    await Notifications.setNotificationChannelAsync("default", {
+      name: "default",
       importance: Notifications.AndroidImportance.MAX,
       vibrationPattern: [0, 250, 250, 250],
-      lightColor: '#FF231F7C',
+      lightColor: "#FF231F7C",
     });
   }
 
   const { status: existingStatus } = await Notifications.getPermissionsAsync();
   let finalStatus = existingStatus;
 
-  if (existingStatus !== 'granted') {
+  if (existingStatus !== "granted") {
     const { status } = await Notifications.requestPermissionsAsync();
     finalStatus = status;
   }
 
-  if (finalStatus !== 'granted') {
+  if (finalStatus !== "granted") {
     return null;
   }
+
+  console.log("status", finalStatus);
 
   token = (await Notifications.getExpoPushTokenAsync()).data;
   return token;
@@ -55,7 +57,7 @@ export async function scheduleNotification(schedule: NotificationSchedule) {
   let trigger: any;
 
   // Set up the appropriate trigger based on recurrence type
-  if (recurrenceType === 'none') {
+  if (recurrenceType === "none") {
     // For one-time notifications, use the exact date
     trigger = scheduledDate;
   } else {
@@ -64,7 +66,7 @@ export async function scheduleNotification(schedule: NotificationSchedule) {
     const minute = scheduledDate.getMinutes();
 
     switch (recurrenceType) {
-      case 'daily':
+      case "daily":
         trigger = {
           hour,
           minute,
@@ -73,7 +75,7 @@ export async function scheduleNotification(schedule: NotificationSchedule) {
         };
         break;
 
-      case 'weekly':
+      case "weekly":
         trigger = {
           weekday: scheduledDate.getDay() + 1, // 1-7, where 1 is Sunday
           hour,
@@ -83,7 +85,7 @@ export async function scheduleNotification(schedule: NotificationSchedule) {
         };
         break;
 
-      case 'monthly':
+      case "monthly":
         trigger = {
           day: scheduledDate.getDate(), // 1-31
           hour,
@@ -93,7 +95,7 @@ export async function scheduleNotification(schedule: NotificationSchedule) {
         };
         break;
 
-      case 'yearly':
+      case "yearly":
         trigger = {
           month: scheduledDate.getMonth(), // 0-11
           day: scheduledDate.getDate(), // 1-31
@@ -107,7 +109,7 @@ export async function scheduleNotification(schedule: NotificationSchedule) {
   }
 
   // For debugging
-  console.log('Scheduling notification with trigger:', JSON.stringify(trigger));
+  console.log("Scheduling notification with trigger:", JSON.stringify(trigger));
 
   // Schedule the notification
   const notificationId = await Notifications.scheduleNotificationAsync({
@@ -118,14 +120,14 @@ export async function scheduleNotification(schedule: NotificationSchedule) {
     },
     trigger,
   });
-
+  console.log(notificationId);
   // Store notification mapping
   await AsyncStorage.setItem(
     `notification_${id}`,
     JSON.stringify({
       ...schedule,
       notificationId,
-    })
+    }),
   );
 
   return notificationId;

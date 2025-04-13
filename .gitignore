@@ -16,7 +16,7 @@ web-build/
 *.key
 *.mobileprovision
 
-drizzle/
+#drizzle/
 android/
 ios/
 # Metro

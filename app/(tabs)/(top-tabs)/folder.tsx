@@ -1,37 +1,28 @@
-import React, { useEffect, useState } from 'react';
-import { ScrollView, View, ActivityIndicator, StyleSheet } from 'react-native';
-import PinterestLayout from '~/components/Pinterest';
-import Card from '~/components/Notes';
-import { folders } from '~/store/schema'; // Adjust the import to your schema file
-import { eq } from 'drizzle-orm';
-import { useSQLiteContext } from 'expo-sqlite';
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { FlashList } from '@shopify/flash-list';
+import React, { useEffect, useState } from "react";
+import { ScrollView, View, ActivityIndicator, StyleSheet } from "react-native";
+import Card from "~/components/Notes";
+import { folders } from "~/store/schema"; // Adjust the import to your schema file
+import { useSQLiteContext } from "expo-sqlite";
+import { FlashList } from "@shopify/flash-list";
+import { useQuery } from "@tanstack/react-query";
+import { getAllFolders } from "~/db/folder";
+
 const Folder = () => {
-  const [foldersData, setFoldersData] = useState<Array<any>>([]);
-  const [loading, setLoading] = useState(true);
   const db = useSQLiteContext();
-  const drizzleDb = drizzle(db);
-  // Fetch folders from the database
-  useEffect(() => {
-    const fetchFolders = async () => {
-      try {
-        // Query the folders table
-        const result = await drizzleDb.select().from(folders);
-        setFoldersData(result); // Update state with fetched folders
-      } catch (error) {
-        console.error('Error fetching folders:', error);
-      } finally {
-        setLoading(false); // Set loading to false
-      }
-    };
 
-    fetchFolders();
-  }, []);
+  const {
+    data: foldersData,
+    isLoading,
+    error,
+    refetch,
+  } = useQuery({
+    queryKey: ["allFolders"],
+    queryFn: () => getAllFolders(db),
+  });
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" />
       </View>
     );
@@ -52,8 +43,8 @@ const Folder = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    width: '100%',
-    height: '100%',
+    width: "100%",
+    height: "100%",
     padding: 10,
   },
 });

@@ -1,4 +1,4 @@
-import React, { Fragment, useState } from 'react';
+import React, { Fragment, useState } from "react";
 import {
   View,
   Image,
@@ -7,26 +7,26 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
-} from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
-import { Input } from '~/components/ui/input';
-import { Text } from '~/components/ui/text';
-import { Muted, Title } from './ui/typography';
-import { Label } from './ui/label';
-import { Checkbox } from './ui/checkbox';
-import { Textarea } from './ui/textarea';
-import { Button } from './ui/button';
-import { Card } from './ui/card';
-import { getLinkPreview } from 'link-preview-js';
-import { BottomSheetScrollView } from '@gorhom/bottom-sheet';
-import { z } from 'zod';
-import SetNotificationDialog from './SetNotificationDialog';
-import { useSQLiteContext } from 'expo-sqlite';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createTag, getAllTages } from '~/db/tags';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Plus } from '~/lib/icons/Plus';
-import { getAllFolders, createFolder } from '~/db/folder';
+} from "react-native";
+import * as ImagePicker from "expo-image-picker";
+import { Input } from "~/components/ui/input";
+import { Text } from "~/components/ui/text";
+import { Muted, Title } from "./ui/typography";
+import { Label } from "./ui/label";
+import { Checkbox } from "./ui/checkbox";
+import { Textarea } from "./ui/textarea";
+import { Button } from "./ui/button";
+import { Card } from "./ui/card";
+import { getLinkPreview } from "link-preview-js";
+import { BottomSheetScrollView } from "@gorhom/bottom-sheet";
+import { z } from "zod";
+import SetNotificationDialog from "./SetNotificationDialog";
+import { useSQLiteContext } from "expo-sqlite";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { createTag, getAllTages } from "~/db/tags";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Plus } from "~/lib/icons/Plus";
+import { getAllFolders, createFolder } from "~/db/folder";
 import {
   Select,
   SelectContent,
@@ -35,17 +35,18 @@ import {
   SelectLabel,
   SelectTrigger,
   SelectValue,
-} from './ui/select';
-import useStore from '~/store/store';
-import { Idea } from '~/lib/types';
-import { createIdea } from '~/db/ideas';
-import { PortalHost } from '@rn-primitives/portal';
+} from "./ui/select";
+import useStore from "~/store/store";
+import { Idea } from "~/lib/types";
+import { createIdea } from "~/db/ideas";
+//import RNFS from "react-native-fs";
+import * as FileSystem from "expo-file-system";
 
 const ideaForm = z.object({
   link: z.string().url().nullable(),
-  title: z.string().min(1, 'Title is required').max(200, 'Title too long'),
-  description: z.string().max(1000, 'Description too long').nullable(),
-  folder_id: z.string().min(1, 'Folder name is required'),
+  title: z.string().min(1, "Title is required").max(200, "Title too long"),
+  description: z.string().max(1000, "Description too long").nullable(),
+  folder_id: z.string().min(1, "Folder name is required"),
 });
 
 type formType = z.infer<typeof ideaForm>;
@@ -61,9 +62,9 @@ const CreateIdea = ({
   const [step, setStep] = React.useState(1);
   const [formData, setFormData] = React.useState<formType>({
     link: null,
-    title: '',
+    title: "",
     description: null,
-    folder_id: '',
+    folder_id: "",
   });
   const { closeBottomSheet } = useStore();
   const [errors, setErrors] = React.useState<FormErrors>({});
@@ -71,11 +72,11 @@ const CreateIdea = ({
   const [addContent, setAddContent] = React.useState(false);
   const [notify, setNotification] = React.useState(false);
   const [notificationDialog, setNotificationDialog] = React.useState(false);
-  const [newFolder, setNewFolder] = useState<string>('');
+  const [newFolder, setNewFolder] = useState<string>("");
   const [addFolder, setAddFolder] = useState(false);
   const [notificationDetails, setNotificationDetails] = React.useState<{
     date: Date | null;
-    recurrence: 'none' | 'daily' | 'weekly' | 'monthly' | 'yearly' | null;
+    recurrence: "none" | "daily" | "weekly" | "monthly" | "yearly" | null;
   }>({
     recurrence: null,
     date: null,
@@ -83,7 +84,7 @@ const CreateIdea = ({
   const [image, setImage] = React.useState(null);
   const [isLoading, setIsLoading] = React.useState(false);
   const [selectedTags, setSelectedTags] = useState<Array<string>>([]);
-  const [newTag, setNewTag] = useState<string>('');
+  const [newTag, setNewTag] = useState<string>("");
   const [addTag, setAddTag] = useState(false);
   const queryClient = useQueryClient();
   const insets = useSafeAreaInsets();
@@ -98,11 +99,11 @@ const CreateIdea = ({
   //tags
   const { isLoading: tagsLoading, data: tagsData } = useQuery({
     queryFn: () => getAllTages(db),
-    queryKey: ['allTags'],
+    queryKey: ["allTags"],
   });
   const mutation = useMutation({
     mutationFn: (tag: string) => createTag(db, tag),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['allTags'] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["allTags"] }),
     onError(error, variables, context) {
       console.log(error);
     },
@@ -111,18 +112,20 @@ const CreateIdea = ({
   //folders
   const { isLoading: folderLoading, data: folderData } = useQuery({
     queryFn: () => getAllFolders(db),
-    queryKey: ['allFolders'],
+    queryKey: ["allFolders"],
   });
 
   const folderMutation = useMutation({
     mutationFn: (folder: string) => createFolder(db, folder),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['allFolders'] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["allFolders"] }),
   });
 
   //ideas
   const ideasMutation = useMutation({
     mutationFn: (idea: Idea) => createIdea(db, idea),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['recentIdeas'] }),
+    onSuccess: () =>
+      queryClient.invalidateQueries({ queryKey: ["recentIdeas"] }),
   });
 
   const handleTagSelection = (tagId: string) => {
@@ -135,12 +138,13 @@ const CreateIdea = ({
 
   React.useEffect(() => {
     (async () => {
-      if (Platform.OS !== 'web') {
-        const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (status !== 'granted') {
+      if (Platform.OS !== "web") {
+        const { status } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (status !== "granted") {
           Alert.alert(
-            'Permission Required',
-            'Sorry, we need camera roll permissions to make this work!'
+            "Permission Required",
+            "Sorry, we need camera roll permissions to make this work!",
           );
         }
       }
@@ -156,7 +160,7 @@ const CreateIdea = ({
         const preview = await getLinkPreview(formData.link, {
           timeout: 8000,
           headers: {
-            'user-agent': 'googlebot',
+            "user-agent": "googlebot",
           },
         });
 
@@ -166,16 +170,19 @@ const CreateIdea = ({
           description: preview.description || prev.description,
         }));
 
-        if ('images' in preview && preview.images?.[0] && !image) {
+        if ("images" in preview && preview.images?.[0] && !image) {
           setImage(preview.images[0]);
         }
       } catch (error) {
-        console.error('Error fetching link preview:', error);
-        Alert.alert('Error', 'Error fetching link preview. Please check the URL.');
+        console.error("Error fetching link preview:", error);
+        Alert.alert(
+          "Error",
+          "Error fetching link preview. Please check the URL.",
+        );
       } finally {
         setIsLoading(false);
         setStep(step + 1);
-        setSnapPoints(['90%', '90%', '90%']);
+        setSnapPoints(["90%", "90%", "90%"]);
       }
     };
 
@@ -201,29 +208,34 @@ const CreateIdea = ({
   };
 
   const handleInputChange = (field: keyof formType) => (text: string) => {
-    const value = text.trim() === '' && field !== 'title' && field !== 'folder_id' ? null : text;
+    const value =
+      text.trim() === "" && field !== "title" && field !== "folder_id"
+        ? null
+        : text;
     setFormData((prev) => ({
       ...prev,
       [field]: value,
     }));
     validateField(field, value);
-    if (field === 'link') setFetchFromLink(false);
+    if (field === "link") setFetchFromLink(false);
   };
 
   const pickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ImagePicker.MediaType.Images,
         allowsEditing: true,
         quality: 1,
       });
 
       if (!result.canceled) {
-        setImage(result.assets[0].uri);
+        //const base64 = await RNFS.readFile(result.assets[0].uri, "base64"); // Convert to base64
+        //const dataUri = `data:image/jpeg;base64,${base64}`;
+        setImage(result.assets[0]);
       }
     } catch (error) {
-      console.error('Error picking image:', error);
-      Alert.alert('Error', 'Error selecting image');
+      console.error("Error picking image:", error);
+      Alert.alert("Error", "Error selecting image");
     }
   };
 
@@ -237,26 +249,26 @@ const CreateIdea = ({
         try {
           z.string().url().parse(formData.link);
         } catch (error) {
-          newErrors.link = 'Please enter a valid URL';
+          newErrors.link = "Please enter a valid URL";
           isValid = false;
         }
       }
     } else if (currentStep === 2) {
-      if (!formData.title || formData.title.trim() === '') {
-        newErrors.title = 'Title is required';
+      if (!formData.title || formData.title.trim() === "") {
+        newErrors.title = "Title is required";
         isValid = false;
       } else if (formData.title.length > 200) {
-        newErrors.title = 'Title too long';
+        newErrors.title = "Title too long";
         isValid = false;
       }
 
       if (formData.description && formData.description.length > 1000) {
-        newErrors.description = 'Description too long';
+        newErrors.description = "Description too long";
         isValid = false;
       }
     } else if (currentStep === 3) {
-      if (!formData.folder_id || formData.folder_id.trim() === '') {
-        newErrors.folder_id = 'Folder name is required';
+      if (!formData.folder_id || formData.folder_id.trim() === "") {
+        newErrors.folder_id = "Folder name is required";
         isValid = false;
       }
     }
@@ -286,15 +298,15 @@ const CreateIdea = ({
 
       setFormData({
         link: null,
-        title: '',
+        title: "",
         description: null,
-        folder_id: '',
+        folder_id: "",
       });
       setNotification(false);
       setNotificationDetails({ date: null, recurrence: null });
       setImage(null);
       setStep(1);
-      Alert.alert('Success', 'Idea created successfully!');
+      Alert.alert("Success", "Idea created successfully!");
       closeBottomSheet();
     } catch (error) {
       if (error instanceof z.ZodError) {
@@ -312,8 +324,8 @@ const CreateIdea = ({
           setStep(3);
         }
       } else {
-        console.error('Error creating idea:', error);
-        Alert.alert('Error', 'Failed to create idea. Please try again.');
+        console.error("Error creating idea:", error);
+        Alert.alert("Error", "Failed to create idea. Please try again.");
       }
     }
   };
@@ -328,10 +340,10 @@ const CreateIdea = ({
 
         switch (step) {
           case 1:
-            setSnapPoints(['90%', '90%', '90%']);
+            setSnapPoints(["90%", "90%", "90%"]);
             break;
           case 2:
-            setSnapPoints(['90%', '90%', '90%']);
+            setSnapPoints(["90%", "90%", "90%"]);
             break;
         }
       }
@@ -344,10 +356,10 @@ const CreateIdea = ({
 
       switch (step) {
         case 2:
-          setSnapPoints(['90%', '90%', '90%']);
+          setSnapPoints(["90%", "90%", "90%"]);
           break;
         case 3:
-          setSnapPoints(['90%', '90%', '90%']);
+          setSnapPoints(["90%", "90%", "90%"]);
           break;
       }
     }
@@ -358,7 +370,7 @@ const CreateIdea = ({
       {[1, 2, 3].map((s) => (
         <View
           key={s}
-          className={`h-2 w-8 rounded-full ${s === step ? 'bg-primary' : 'bg-muted'}`}
+          className={`h-2 w-8 rounded-full ${s === step ? "bg-primary" : "bg-muted"}`}
         />
       ))}
     </View>
@@ -371,15 +383,20 @@ const CreateIdea = ({
           <Label nativeID="link">Link</Label>
           <Input
             placeholder="Eg: https://example.com"
-            value={formData.link || ''}
+            value={formData.link || ""}
             id="link"
-            onChangeText={handleInputChange('link')}
+            onChangeText={handleInputChange("link")}
             aria-labelledby="link"
           />
-          {errors.link && <Text className="mt-1 text-sm text-destructive">{errors.link}</Text>}
+          {errors.link && (
+            <Text className="mt-1 text-sm text-destructive">{errors.link}</Text>
+          )}
         </View>
         <View className="flex flex-row gap-2">
-          <Checkbox checked={fetchFromLink} onCheckedChange={setFetchFromLink} />
+          <Checkbox
+            checked={fetchFromLink}
+            onCheckedChange={setFetchFromLink}
+          />
           <Muted>Fetch details from link.</Muted>
         </View>
       </View>
@@ -394,25 +411,29 @@ const CreateIdea = ({
         </Label>
         <Input
           placeholder="Eg: 20 project ideas."
-          value={formData.title || ''}
+          value={formData.title || ""}
           id="title"
-          onChangeText={handleInputChange('title')}
+          onChangeText={handleInputChange("title")}
           aria-labelledby="title"
         />
-        {errors.title && <Text className="mt-1 text-sm text-destructive">{errors.title}</Text>}
+        {errors.title && (
+          <Text className="mt-1 text-sm text-destructive">{errors.title}</Text>
+        )}
       </View>
 
       <View>
         <Label nativeID="description">Description/Body</Label>
         <Textarea
           placeholder="Eg: Best 20 mini project ideas ..."
-          value={formData.description || ''}
-          onChangeText={handleInputChange('description')}
+          value={formData.description || ""}
+          onChangeText={handleInputChange("description")}
           numberOfLines={2}
           aria-labelledby="description"
         />
         {errors.description && (
-          <Text className="mt-1 text-sm text-destructive">{errors.description}</Text>
+          <Text className="mt-1 text-sm text-destructive">
+            {errors.description}
+          </Text>
         )}
       </View>
       <View>
@@ -422,16 +443,19 @@ const CreateIdea = ({
             <TouchableOpacity
               key={tag.id}
               onPress={() => handleTagSelection(tag.id)}
-              className={`${selectedTags.includes(tag.id) ? 'bg-primary' : 'bg-background'} mx-1 rounded-2xl px-3 py-1 `}>
+              className={`${selectedTags.includes(tag.id) ? "bg-primary" : "bg-background"} mx-1 rounded-2xl px-3 py-1 `}
+            >
               <Text
-                className={`${selectedTags.includes(tag.id) ? 'text-primary-foreground' : 'text-foreground'}`}>
+                className={`${selectedTags.includes(tag.id) ? "text-primary-foreground" : "text-foreground"}`}
+              >
                 #{tag.name}
               </Text>
             </TouchableOpacity>
           ))}
           <TouchableOpacity
             onPress={() => setAddTag(true)}
-            className={` mx-1 flex items-center justify-center rounded-2xl bg-background px-3 py-1 `}>
+            className={` mx-1 flex items-center justify-center rounded-2xl bg-background px-3 py-1 `}
+          >
             <Plus size={16} className={`text-foreground`} />
           </TouchableOpacity>
         </ScrollView>
@@ -444,13 +468,14 @@ const CreateIdea = ({
               onChangeText={setNewTag}
             />
             <Button
-              variant={'outline'}
+              variant={"outline"}
               onPress={() => {
                 mutation.mutate(newTag);
-                setNewTag('');
+                setNewTag("");
                 setAddTag(false);
               }}
-              className=" ml-2 bg-card">
+              className=" ml-2 bg-card"
+            >
               <Text>Add</Text>
             </Button>
           </View>
@@ -462,15 +487,18 @@ const CreateIdea = ({
         <View className="mt-2">
           {image && (
             <TouchableOpacity onPress={pickImage} className="h-40 w-full">
-              <Image source={{ uri: image }} className="mb-2 h-40 w-full rounded-lg object-cover" />
+              <Image
+                source={{ uri: image }}
+                className="mb-2 h-40 w-full rounded-lg object-cover"
+              />
             </TouchableOpacity>
           )}
 
           {!image && (
             <TouchableOpacity onPress={pickImage} className="h-40 w-full">
               <Card className="mb-2 flex h-40 w-full items-center justify-center rounded-lg border-0 border-none bg-background p-0">
-                <Text className={isLoading ? 'text-muted' : 'text-foreground'}>
-                  {isLoading ? 'Fetching...' : 'Select Image'}
+                <Text className={isLoading ? "text-muted" : "text-foreground"}>
+                  {isLoading ? "Fetching..." : "Select Image"}
                 </Text>
               </Card>
             </TouchableOpacity>
@@ -499,8 +527,9 @@ const CreateIdea = ({
         </Label>
         <Select
           onValueChange={(value) => {
-            if (value) handleInputChange('folder_id')(value.value);
-          }}>
+            if (value) handleInputChange("folder_id")(value.value);
+          }}
+        >
           <SelectTrigger className="w-full">
             <SelectValue
               className="native:text-lg text-sm text-foreground"
@@ -518,15 +547,18 @@ const CreateIdea = ({
             </SelectGroup>
             <Button
               onPress={() => setAddFolder(true)}
-              variant={'outline'}
-              size={'icon'}
-              className="w-full bg-card">
+              variant={"outline"}
+              size={"icon"}
+              className="w-full bg-card"
+            >
               <Plus size={16} className={`text-card-foreground`} />
             </Button>
           </SelectContent>
         </Select>
         {errors.folder_id && (
-          <Text className="mt-1 text-sm text-destructive">{errors.folder_id}</Text>
+          <Text className="mt-1 text-sm text-destructive">
+            {errors.folder_id}
+          </Text>
         )}
         {addFolder && (
           <View className="mt-2 flex flex-row">
@@ -537,13 +569,14 @@ const CreateIdea = ({
               onChangeText={setNewFolder}
             />
             <Button
-              variant={'outline'}
+              variant={"outline"}
               onPress={() => {
                 folderMutation.mutate(newFolder);
-                setNewFolder('');
+                setNewFolder("");
                 setAddFolder(false);
               }}
-              className=" ml-2 bg-card">
+              className=" ml-2 bg-card"
+            >
               <Text>Add</Text>
             </Button>
           </View>
@@ -559,8 +592,9 @@ const CreateIdea = ({
 
   return (
     <BottomSheetScrollView
-      style={{ flex: 1, width: '100%', maxWidth: 768 }}
-      className="flex w-full flex-1  ">
+      style={{ flex: 1, width: "100%", maxWidth: 768 }}
+      className="flex w-full flex-1  "
+    >
       <Title className="mb-5">Start Creating Now</Title>
       {renderStepIndicator()}
 
@@ -572,8 +606,9 @@ const CreateIdea = ({
         {step > 1 && (
           <Button
             variant="ghost"
-            className={step === 1 ? 'flex w-full flex-row gap-2' : ''}
-            onPress={prevStep}>
+            className={step === 1 ? "flex w-full flex-row gap-2" : ""}
+            onPress={prevStep}
+          >
             <Text>Previous</Text>
           </Button>
         )}
@@ -583,8 +618,13 @@ const CreateIdea = ({
             variant="default"
             disabled={isLoading}
             onPress={nextStep}
-            className={step === 1 ? 'flex w-full flex-row gap-2' : ''}>
-            {!isLoading ? <Text>Next</Text> : <ActivityIndicator size={16} color={'black'} />}
+            className={step === 1 ? "flex w-full flex-row gap-2" : ""}
+          >
+            {!isLoading ? (
+              <Text>Next</Text>
+            ) : (
+              <ActivityIndicator size={16} color={"black"} />
+            )}
           </Button>
         ) : (
           <Button onPress={handleSubmit} variant="default">

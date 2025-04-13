@@ -1,11 +1,21 @@
-import { drizzle } from 'drizzle-orm/expo-sqlite';
-import { SQLiteDatabase } from 'expo-sqlite';
-import { v7 as uuidv7 } from 'uuid';
-import { ideas, ideasToTags, notifications, tags } from '~/store/schema';
-import { Idea } from '~/lib/types';
-import { scheduleNotification } from '~/services/notificationService';
-import { eq, sql } from 'drizzle-orm';
-import 'react-native-get-random-values';
+import { drizzle } from "drizzle-orm/expo-sqlite";
+import { SQLiteDatabase } from "expo-sqlite";
+import { v7 as uuidv7 } from "uuid";
+import { ideas, ideasToTags, notifications, tags } from "~/store/schema";
+import { Idea } from "~/lib/types";
+import { scheduleNotification } from "~/services/notificationService";
+import { eq, sql } from "drizzle-orm";
+import "react-native-get-random-values";
+
+type IdeaPick = Pick<
+  typeof ideas.$inferSelect,
+  "id" | "title" | "description" | "image" | "content" | "link"
+>;
+type Tag = typeof tags.$inferSelect;
+
+export interface IdeaWithTags extends IdeaPick {
+  tags: Tag[];
+}
 
 export async function createIdea(expoDb: SQLiteDatabase, idea: Idea) {
   const db = drizzle(expoDb);
@@ -13,7 +23,6 @@ export async function createIdea(expoDb: SQLiteDatabase, idea: Idea) {
   await db.transaction(async (tx) => {
     const ideasId = uuidv7();
 
-    // Create idea
     await tx.insert(ideas).values({
       title: idea.title,
       image: idea.image,
@@ -24,35 +33,30 @@ export async function createIdea(expoDb: SQLiteDatabase, idea: Idea) {
       is_synced: false,
     });
 
-    // Handle tags
     if (idea.tags) {
       for (const tag of idea.tags) {
         await tx.insert(ideasToTags).values({ ideaId: ideasId, tagId: tag });
       }
     }
 
-    // Handle notification
     if (idea.notification) {
       const notificationId = uuidv7();
       const notificationTime = idea.notification.date;
-
-      // Create notification record
+      const notifyId = await scheduleNotification({
+        id: notificationId,
+        taskId: ideasId,
+        title: `Reminder: ${idea.title}`,
+        body: idea.description || "Check your idea",
+        time: notificationTime,
+        recurrenceType: idea.notification.recurrence,
+      });
       await tx.insert(notifications).values({
         id: notificationId,
         taskId: ideasId,
         title: `Reminder: ${idea.title}`,
-        body: idea.description || 'Check your idea',
+        body: idea.description || "Check your idea",
         notificationTime,
-        recurrenceType: idea.notification.recurrence,
-      });
-
-      // Schedule the notification
-      await scheduleNotification({
-        id: notificationId,
-        taskId: ideasId,
-        title: `Reminder: ${idea.title}`,
-        body: idea.description || 'Check your idea',
-        time: notificationTime,
+        notificationId: notifyId,
         recurrenceType: idea.notification.recurrence,
       });
     }
@@ -87,16 +91,53 @@ export const fetchRecentIdeas = async (expoDb: SQLiteDatabase) => {
   return Object.values(groupedIdeas);
 };
 
-export const fetchContentFromId = async (expoDb: SQLiteDatabase, id: string) => {
-  const drizzleDb = drizzle(expoDb);
-  const result = await drizzleDb
-    .select({ content: ideas.content })
+export const fetchIdeaById = async (
+  expoDb: SQLiteDatabase,
+  ideaId: string,
+): Promise<IdeaWithTags | null> => {
+  const db = drizzle(expoDb);
+
+  const result = await db
+    .select({
+      id: ideas.id,
+      title: ideas.title,
+      description: ideas.description,
+      image: ideas.image,
+      content: ideas.content,
+      link: ideas.link,
+      tag: tags,
+    })
     .from(ideas)
-    .where(eq(ideas.id, id.toString()));
-  return result;
+    .where(eq(ideas.id, ideaId))
+    .leftJoin(ideasToTags, eq(ideas.id, ideasToTags.ideaId))
+    .leftJoin(tags, eq(tags.id, ideasToTags.tagId));
+
+  if (result.length === 0) return null;
+
+  const idea: IdeaWithTags = {
+    id: result[0].id,
+    title: result[0].title,
+    description: result[0].description,
+    image: result[0].image,
+    content: result[0].content,
+    link: result[0].link,
+    tags: [],
+  };
+
+  result.forEach(({ tag }) => {
+    if (tag && tag.id) {
+      idea.tags.push(tag);
+    }
+  });
+
+  return idea;
 };
 
-export const saveContent = async (expoDb: SQLiteDatabase, content: string, id: string) => {
+export const saveContent = async (
+  expoDb: SQLiteDatabase,
+  content: string,
+  id: string,
+) => {
   const drizzleDb = drizzle(expoDb);
   await drizzleDb
     .update(ideas)
